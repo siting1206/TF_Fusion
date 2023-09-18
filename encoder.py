@@ -12,11 +12,18 @@ class Encoder(object):
         self.model_pre_path = model_pre_path
 
         with tf.variable_scope('encoder'):
+            #9k
             self.weight_vars.append(self._create_variables(1, 8, 3, scope='conv1_1'))
-
             self.weight_vars.append(self._create_variables(8, 8, 3, scope='dense_block_conv1'))
             self.weight_vars.append(self._create_variables(16, 8, 3, scope='dense_block_conv2'))
             self.weight_vars.append(self._create_variables(24, 8, 3, scope='dense_block_conv3'))
+            
+            #37k
+            #self.weight_vars.append(self._create_variables(1, 16, 3, scope='conv1_1'))
+
+            #self.weight_vars.append(self._create_variables(16, 16, 3, scope='dense_block_conv1'))
+            #self.weight_vars.append(self._create_variables(32, 16, 3, scope='dense_block_conv2'))
+            #self.weight_vars.append(self._create_variables(48, 16, 3, scope='dense_block_conv3'))
 
             # self.weight_vars.append(self._create_variables(64, 32, 3, scope='conv1_2'))
 

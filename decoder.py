@@ -12,8 +12,11 @@ class Decoder(object):
 
         with tf.variable_scope('decoder'):
 
+            # 37k
             #self.weight_vars.append(self._create_variables(64, 32, 3, scope='conv2_1'))
-            #self.weight_vars.append(self._create_variables(32, 32, 3, scope='conv2_2'))
+            #self.weight_vars.append(self._create_variables(32, 16, 3, scope='conv2_2')) 
+            #self.weight_vars.append(self._create_variables(16, 1, 3, scope='conv2_3'))
+            # 9k
             self.weight_vars.append(self._create_variables(32, 16, 3, scope='conv2_1'))
             self.weight_vars.append(self._create_variables(16, 8, 3, scope='conv2_2'))
             self.weight_vars.append(self._create_variables(8, 1 , 3, scope='conv2_3'))

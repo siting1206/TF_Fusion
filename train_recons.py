@@ -63,7 +63,7 @@ def train_recons(ir_trn_imgs_path, vi_trn_imgs_path, ir_val_imgs_path, vi_val_im
     INPUT_SHAPE_OR = (BATCH_SIZE, HEIGHT, WIDTH, CHANNELS)
 
         
-    moodel_save_path = './models/model_0723_9k_qat.ckpt'
+    moodel_save_path = './models/model_0827_9k_qat_add.ckpt'
     
 
     # create the graph
@@ -94,9 +94,9 @@ def train_recons(ir_trn_imgs_path, vi_trn_imgs_path, ir_val_imgs_path, vi_val_im
 
         loss = l_int + 20*l_grad
 
-        # quantization aware training
+        ## quantization aware training
         g = tf.get_default_graph()
-        tf.contrib.quantize.create_training_graph(input_graph=g, quant_delay=5500000)
+        tf.contrib.quantize.create_training_graph(input_graph=g, quant_delay=3000000)
 
 
         train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(loss)
@@ -141,6 +141,7 @@ def train_recons(ir_trn_imgs_path, vi_trn_imgs_path, ir_val_imgs_path, vi_val_im
                 vi_trn_batch = get_train_images(vi_trn_path, crop_height=HEIGHT, crop_width=WIDTH, flag=False)
                 ### read RGB images
                 # original_batch = get_train_images_rgb(original_path, crop_height=HEIGHT, crop_width=WIDTH, flag=False)
+                #print(ir_trn_batch.shape)
                 ir_trn_batch = ir_trn_batch.transpose((3, 0, 1, 2))
                 vi_trn_batch = vi_trn_batch.transpose((3, 0, 1, 2))
 
@@ -202,20 +203,20 @@ def train_recons(ir_trn_imgs_path, vi_trn_imgs_path, ir_val_imgs_path, vi_val_im
         saver.save(sess, save_path)
 
         loss_data = Loss_all[:count_loss]
-        scio.savemat('./models_rev/loss/DeepDenseLossData_0711'+str(ssim_weight)+'.mat',{'loss':loss_data})
+        scio.savemat('./models/loss/DeepDenseLossData_0711'+str(ssim_weight)+'.mat',{'loss':loss_data})
 
         loss_grad_data = Loss_grad[:count_loss]
-        scio.savemat('./models_rev/loss/DeepDenseLossGradDat_0711'+str(ssim_weight)+'.mat', {'loss_grad': loss_grad_data})
+        scio.savemat('./models/loss/DeepDenseLossGradDat_0711'+str(ssim_weight)+'.mat', {'loss_grad': loss_grad_data})
 
         loss_int_data = Loss_int[:count_loss]
-        scio.savemat('./models_rev/loss/DeepDenseLossIntData_0711.mat'+str(ssim_weight)+'', {'loss_int': loss_int_data})
+        scio.savemat('./models/loss/DeepDenseLossIntData_0711.mat'+str(ssim_weight)+'', {'loss_int': loss_int_data})
 
         # IS_Validation = True;
         if IS_Validation:
             validation_ssim_data = Val_ssim_data[:count_loss]
-            scio.savemat('./models_rev/val/Validation_grad_Data.mat' + str(ssim_weight) + '', {'val_grad': validation_ssim_data})
+            scio.savemat('./models/val/Validation_grad_Data.mat' + str(ssim_weight) + '', {'val_grad': validation_ssim_data})
             validation_pixel_data = Val_pixel_data[:count_loss]
-            scio.savemat('./models_rev/val/Validation_int_Data.mat' + str(ssim_weight) + '', {'val_int': validation_pixel_data})
+            scio.savemat('./models/val/Validation_int_Data.mat' + str(ssim_weight) + '', {'val_int': validation_pixel_data})
 
 
         if debug:

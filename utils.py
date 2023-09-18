@@ -50,7 +50,7 @@ def get_train_images(paths, resize_len=512, crop_height=256, crop_width=256, fla
             image = np.stack((image, image, image), axis=-1)
         else:
             image = np.stack(image, axis=0)
-            #image = image.reshape([crop_height, crop_width, 1])
+            #image = image.reshape([crop_height, crop_width, 1]) # train mode
             #image = image.reshape([, , 1])
         images.append(image)
     images = np.stack(images, axis=-1)
@@ -113,8 +113,6 @@ def save_images(paths, datas, save_path, prefix=None, suffix=None):
 
     t1 = len(paths)
     t2 = len(datas)
-    print('length of paths: ', len(paths))
-    print('length of datas: ', len(datas))
     assert(len(paths) == len(datas))
 
     if prefix is None:

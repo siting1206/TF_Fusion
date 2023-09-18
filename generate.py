@@ -1,5 +1,3 @@
-# Use a trained DenseFuse Net to generate fused images
-
 import tensorflow as tf
 import numpy as np
 from datetime import datetime
@@ -27,14 +25,38 @@ def generate(infrared_path, visible_path, model_path, model_pre_path, ssim_weigh
 			_handler_rgb_l1(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index,
 			             output_path=output_path)
 		else:
-			if type == 'addition':
-				print('addition')
-				_handler(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index, output_path=output_path)
-			elif type == 'QAT':
-				print('QAT')
-				_handler_quant(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index, output_path=output_path)
+                    if type == 'normal': # non-qat mode
+                        _handler(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index, output_path=output_path)
+                    elif type == 'qat_trn':
+                        _handler_qat_trn(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index, output_path=output_path)
+                    elif type == 'qat_test':
+                                _handler_qat_test(infrared_path, visible_path, model_path, model_pre_path, ssim_weight, index, output_path=output_path)
 
 def _handler(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, output_path=None):
+        ir_img = get_train_images(ir_path, crop_height=None, crop_width=None, flag=False)
+        vis_img = get_train_images(vis_path, crop_height=None, crop_width=None, flag=False)
+        dimension = ir_img.shape
+        
+        ir_img = ir_img.reshape([1, dimension[0], dimension[1], dimension[2]])
+        vis_img = vis_img.reshape([1, dimension[0], dimension[1], dimension[2]])
+
+        print('img shape final:', ir_img.shape)
+        
+        with tf.Graph().as_default(), tf.Session() as sess:
+                infrared_field = tf.placeholder(tf.float32, shape=ir_img.shape, name='content')
+                visible_field = tf.placeholder(tf.float32, shape=ir_img.shape, name='style')
+                
+                dfn = DenseFuseNet(model_pre_path)
+                output_image = dfn.transform_addition(infrared_field, visible_field)
+
+                saver = tf.train.Saver()
+                saver.restore(sess, model_path)
+                print("Normal test done")
+                
+                output = sess.run(output_image, feed_dict={infrared_field: ir_img, visible_field: vis_img})
+                save_images(ir_path, output, output_path, suffix='.jpg')
+
+def _handler_qat_trn(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, output_path=None):
         ir_img = get_train_images(ir_path, crop_height=None, crop_width=None, flag=False)
         vis_img = get_train_images(vis_path, crop_height=None, crop_width=None, flag=False)
         dimension = ir_img.shape
@@ -52,11 +74,11 @@ def _handler(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, 
                 
                 output_image = dfn.transform_addition(infrared_field, visible_field)
 
-                # quantization aware training
+                ## quantization aware training
                 g = tf.get_default_graph()
                 tf.contrib.quantize.create_eval_graph(input_graph=g)
 
-                eval_graph_file = '/home/siting/Siting/fusion_tf/eval_graph_file_nchu'
+                eval_graph_file = '/home/siting/Siting/fusion_tf/eval_graph_file_9k_relu'
                 with open(eval_graph_file, 'w') as f:
                     f.write(str(g.as_graph_def()))
 
@@ -65,29 +87,32 @@ def _handler(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, 
                 saver.restore(sess, model_path)
 
                 print("---")
+                ## QAT process
                 frozen_graph_def = graph_util.convert_variables_to_constants(
                         sess, sess.graph_def, ['BiasAdd_10'])
                 tf.io.write_graph(
                         frozen_graph_def,
-                        "qat_nchu/pb_model",
+                        "qat_9k_relu/pb_model",
                         "freeze_eval_graph.pb",
                         as_text=False)
 
-                print('qat done')
+                print('qat training done')
                 
-                #output = sess.run(output_image, feed_dict={infrared_field: ir_img, visible_field: vis_img})
-                #save_images(ir_path, output, output_path, suffix='.jpg')
+                output = sess.run(output_image, feed_dict={infrared_field: ir_img, visible_field: vis_img})
+                save_images(ir_path, output, output_path, suffix='.jpg')
 
-def _handler_quant(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, output_path=None):
+def _handler_qat_test(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, output_path=None):
 
         ir = Image.open(ir_path)
         ir = ir.convert('L')
-        ir = ir.resize((640, 480))
+        #ir = ir.resize((640, 480))
+        ir = ir.resize((1280, 1024))
         ir = np.array(ir, np.uint8)
         
         vi = Image.open(vis_path)
         vi = vi.convert('L')
-        vi = vi.resize((640, 480))
+        #vi = vi.resize((640, 480))
+        vi = vi.resize((1280, 1024))
         vi = np.array(vi, np.uint8)
 
         dimension = ir.shape
@@ -95,7 +120,7 @@ def _handler_quant(ir_path, vis_path, model_path, model_pre_path, ssim_weight, i
         vi = vi.reshape([1, dimension[0], dimension[1], 1])
 
         # Load TFLite model and allocate tensors.
-        interpreter = tf.lite.Interpreter(model_path='./model_nchu_uint8.tflite')
+        interpreter = tf.lite.Interpreter(model_path='./model_9k_relu.tflite')
         interpreter.allocate_tensors()
 
         # Get input and output tensors.
@@ -106,6 +131,7 @@ def _handler_quant(ir_path, vis_path, model_path, model_pre_path, ssim_weight, i
         interpreter.set_tensor(input_details[1]['index'], vi)
         interpreter.invoke()
         output_data = interpreter.get_tensor(output_details[0]['index'])
+        #print(output_data.shape)
         save_images(ir_path, output_data, output_path, suffix='.jpg')
 
 def _handler_l1(ir_path, vis_path, model_path, model_pre_path, ssim_weight, index, output_path=None):

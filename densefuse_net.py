@@ -17,8 +17,8 @@ class DenseFuseNet(object):
         # encode image
         enc_1 = self.encoder.encode(img1)
         enc_2 = self.encoder.encode(img2)
-        target_features = tf.nn.softmax(enc_1 + enc_2)
-        # target_features = enc_c
+        target_features = tf.nn.relu(enc_1 + enc_2)
+        
         self.target_features = target_features
         print('target_features:', target_features.shape)
         # decode target features back to image

@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-path_to_frozen_graphdef_pb = 'qat_37k/pb_model/freeze_eval_graph.pb'
+path_to_frozen_graphdef_pb = 'qat_9k_relu/pb_model/freeze_eval_graph.pb'
 input_shapes = {'content':[1,None,None,1], 'style':[1,None,None,1]}
 #input_shapes = {'content':[1,640,480,1], 'style':[1,640,480,1]}
 input_arrays = ["content", "style"]
@@ -18,4 +18,4 @@ converter.default_ranges_stats = (0, 255)
 converter.inference_type = tf.uint8
 
 tflite_uint8_model = converter.convert()
-open("model_37k_uint8.tflite", "wb").write(tflite_uint8_model)
+open("model_9k_relu.tflite", "wb").write(tflite_uint8_model)
